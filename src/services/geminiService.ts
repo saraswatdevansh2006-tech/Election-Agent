@@ -3,9 +3,13 @@ import { GoogleGenAI } from "@google/genai";
 export async function askElectionAssistant(query: string, country: { name: string; electionInfo: any }, languageName: string = 'English') {
   try {
     const key = (window as any).GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
+    if (!key) {
+      console.warn("Gemini API Key is missing.");
+      return "The assistant is currently unavailable. Please check the API configuration.";
+    }
     const ai = new GoogleGenAI({ apiKey: key });
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-1.5-flash",
       contents: [
         {
           role: "user",

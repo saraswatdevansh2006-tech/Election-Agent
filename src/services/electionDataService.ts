@@ -1,7 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-
 export interface LiveElectionData {
   nextElection: string;
   voterRegistrationDeadline: string;
@@ -10,8 +8,12 @@ export interface LiveElectionData {
 
 export async function fetchLiveElectionData(countryName: string): Promise<LiveElectionData | null> {
   try {
+    const key = (window as any).GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
+    if (!key) return null;
+    
+    const ai = new GoogleGenAI({ apiKey: key });
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: [
         {
           role: "user",

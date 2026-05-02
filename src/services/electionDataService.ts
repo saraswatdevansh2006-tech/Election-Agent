@@ -1,5 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
-
 export interface LiveElectionData {
   nextElection: string;
   voterRegistrationDeadline: string;
@@ -8,31 +6,23 @@ export interface LiveElectionData {
 
 export async function fetchLiveElectionData(countryName: string): Promise<LiveElectionData | null> {
   try {
-    const key = (window as any).GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
-    if (!key) return null;
-    
-    const ai = new GoogleGenAI({ apiKey: key });
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: `Fetch the latest, real-time election data for ${countryName}. 
-          Return ONLY a JSON object with the following structure:
-          {
-            "nextElection": "Date and Type of next major election",
-            "voterRegistrationDeadline": "Specific deadline or rule",
-            "votingMethods": ["list", "of", "methods"]
-          }` }]
-        }
-      ],
-      config: {
-        responseMimeType: "application/json",
-      }
+    const prompt = `Fetch the latest, real-time election data for ${countryName}. 
+    Return ONLY a JSON object with the following structure:
+    {
+      "nextElection": "Date and Type of next major election",
+      "voterRegistrationDeadline": "Specific deadline or rule",
+      "votingMethods": ["list", "of", "methods"]
+    }`;
+
+    const response = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, jsonMode: true })
     });
 
-    const text = response.text || "";
-    return JSON.parse(text) as LiveElectionData;
+    if (!response.ok) throw new Error('AI Proxy Error');
+    const data = await response.json();
+    return JSON.parse(data.text) as LiveElectionData;
   } catch (error) {
     console.error("Live Fetch Error:", error);
     return null;

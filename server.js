@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
+import compression from 'compression';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,19 +10,27 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 8080;
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'dist')));
+// Middleware for better performance
+app.use(compression());
+app.use(express.json({ limit: '1mb' }));
+app.use(express.static(path.join(__dirname, 'dist'), {
+  maxAge: '1d',
+  etag: true
+}));
 
 // Secure AI Proxy Route
 app.post('/api/ai', async (req, res) => {
-  try {
-    const { prompt, model = 'gemini-2.5-flash', jsonMode = false } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
-    
-    if (!apiKey) {
-      return res.status(500).json({ error: 'API key not configured' });
-    }
+  const { prompt, model = 'gemini-1.5-flash', jsonMode = false } = req.body;
+  const apiKey = process.env.GEMINI_API_KEY;
 
+  console.log(`AI Request received: prompt length=${prompt?.length}, model=${model}, jsonMode=${jsonMode}`);
+
+  if (!apiKey) {
+    console.error('ERROR: GEMINI_API_KEY is not set in the environment.');
+    return res.status(500).json({ error: 'AI Assistant is currently unavailable (Configuration Error)' });
+  }
+
+  try {
     const genAI = new GoogleGenAI(apiKey);
     const aiModel = genAI.getGenerativeModel({ 
       model,
@@ -30,10 +39,16 @@ app.post('/api/ai', async (req, res) => {
 
     const result = await aiModel.generateContent(prompt);
     const response = await result.response;
-    res.json({ text: response.text() });
+    const text = response.text();
+    
+    console.log(`AI Response success: text length=${text.length}`);
+    res.json({ text });
   } catch (error) {
-    console.error('AI Proxy Error:', error);
-    res.status(500).json({ error: 'Failed to process AI request' });
+    console.error('AI Proxy Error:', error.message);
+    res.status(500).json({ 
+      error: 'The assistant encountered an error.',
+      message: error.message
+    });
   }
 });
 
@@ -43,5 +58,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`VoterVoice Server running on port ${port}`);
 });

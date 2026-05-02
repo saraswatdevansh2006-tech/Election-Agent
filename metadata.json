@@ -1,0 +1,6 @@
+{
+  "name": "VoterVoice",
+  "description": "An interactive election assistant with dynamic flag themes, AI-powered guidance, and real-time election tracking.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": []
+}
